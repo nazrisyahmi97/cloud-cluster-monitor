@@ -1,0 +1,32 @@
+{
+  "server": {
+    "port": 8080,
+    "poll_interval_seconds": 4.5
+  },
+  "nodes": [
+    { "id": "node01", "ip": "10.0.0.10", "alias": "node01", "name": "Node01 — Edge Gateway & Auth", "role": "API Gateway / Auth / Web" },
+    { "id": "node02", "ip": "10.0.0.11", "alias": "node02", "name": "Node02 — Core Services", "role": "Order / Payment / Inventory" },
+    { "id": "node03", "ip": "10.0.0.12", "alias": "node03", "name": "Node03 — Async Worker Fleet", "role": "Reports / Batch / Processing" },
+    { "id": "node04", "ip": "10.0.0.13", "alias": "node04", "name": "Node04 — Analytics & Streaming", "role": "Reports / Labels / Telemetry" }
+  ],
+  "eureka": {
+    "enabled": true,
+    "url": "http://10.0.0.20:8761/eureka/apps"
+  },
+  "probes": [
+    { "node": "Node03 (.12)", "ip": "10.0.0.12", "port": 8055, "name": "report-worker-primary", "unit": "report-worker-primary.service" },
+    { "node": "Node03 (.12)", "ip": "10.0.0.12", "port": 8255, "name": "report-worker-secondary", "unit": "report-worker-secondary.service" },
+    { "node": "Node03 (.12)", "ip": "10.0.0.12", "port": 8355, "name": "report-worker-batch", "unit": "report-worker-batch.service" },
+    { "node": "Node04 (.13)", "ip": "10.0.0.13", "port": 8055, "name": "report-worker-primary", "unit": "report-worker-primary.service" },
+    { "node": "Node04 (.13)", "ip": "10.0.0.13", "port": 8255, "name": "report-worker-secondary", "unit": "report-worker-secondary.service" },
+    { "node": "Node04 (.13)", "ip": "10.0.0.13", "port": 8155, "name": "report-worker-streaming", "unit": "report-worker-streaming.service" }
+  ],
+  "infrastructure": [
+    { "id": "mysql", "name": "MySQL Cluster Router", "host": "10.0.0.30", "port": 6446 },
+    { "id": "eureka", "name": "Spring Cloud Eureka Registry", "host": "10.0.0.20", "port": 8761 },
+    { "id": "message_broker", "name": "ActiveMQ / RabbitMQ Broker", "host": "10.0.0.20", "port": 5672 },
+    { "id": "redis", "name": "Redis Cluster Cache", "host": "10.0.0.40", "port": 6379 },
+    { "id": "auth_server", "name": "Keycloak SSO Server", "host": "10.0.0.50", "port": 8080 },
+    { "id": "search_engine", "name": "Elasticsearch / OpenSearch", "host": "10.0.0.60", "port": 9200 }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "10.0.0.10": {
+    "api-gateway:8080": { "name": "api-gateway", "port": 8080 },
+    "auth-service:8081": { "name": "auth-service", "port": 8081 },
+    "user-service:8082": { "name": "user-service", "port": 8082 },
+    "notification-service:8083": { "name": "notification-service", "port": 8083 },
+    "portal-web:8000": { "name": "portal-web", "port": 8000 },
+    "admin-portal:8001": { "name": "admin-portal", "port": 8001 },
+    "customer-portal:8002": { "name": "customer-portal", "port": 8002 },
+    "identity-provider:8090": { "name": "identity-provider", "port": 8090 }
+  },
+  "10.0.0.11": {
+    "order-service:8100": { "name": "order-service", "port": 8100 },
+    "payment-service:8101": { "name": "payment-service", "port": 8101 },
+    "invoice-service:8102": { "name": "invoice-service", "port": 8102 },
+    "billing-service:8103": { "name": "billing-service", "port": 8103 },
+    "shipping-service:8104": { "name": "shipping-service", "port": 8104 },
+    "inventory-service:8105": { "name": "inventory-service", "port": 8105 },
+    "catalog-service:8106": { "name": "catalog-service", "port": 8106 },
+    "pricing-service:8107": { "name": "pricing-service", "port": 8107 }
+  },
+  "10.0.0.12": {
+    "report-worker-primary:8055": { "name": "report-worker-primary", "port": 8055 },
+    "report-worker-secondary:8255": { "name": "report-worker-secondary", "port": 8255 },
+    "report-worker-batch:8355": { "name": "report-worker-batch", "port": 8355 },
+    "export-service:8201": { "name": "export-service", "port": 8201 },
+    "pdf-generator:8202": { "name": "pdf-generator", "port": 8202 },
+    "email-queue-worker:8203": { "name": "email-queue-worker", "port": 8203 },
+    "sync-worker:8204": { "name": "sync-worker", "port": 8204 }
+  },
+  "10.0.0.13": {
+    "report-worker-primary:8055": { "name": "report-worker-primary", "port": 8055 },
+    "report-worker-secondary:8255": { "name": "report-worker-secondary", "port": 8255 },
+    "report-worker-streaming:8155": { "name": "report-worker-streaming", "port": 8155 },
+    "analytics-worker:8301": { "name": "analytics-worker", "port": 8301 },
+    "telemetry-service:8302": { "name": "telemetry-service", "port": 8302 },
+    "audit-logger:8303": { "name": "audit-logger", "port": 8303 },
+    "webhook-dispatcher:8304": { "name": "webhook-dispatcher", "port": 8304 }
+  }
+}

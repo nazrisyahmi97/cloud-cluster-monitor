@@ -1,0 +1,787 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Cluster — Live Mission Control</title>
+    <link rel="icon" type="image/jpeg" href="avatar.jpg">
+    <link rel="shortcut icon" type="image/jpeg" href="avatar.jpg">
+    <link rel="apple-touch-icon" href="avatar.jpg">
+    <style>
+        :root {
+            --bg: #070a13;
+            --surface: rgba(15, 23, 42, 0.75);
+            --surface-border: rgba(255, 255, 255, 0.08);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.25);
+            --accent: #818cf8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #f43f5e;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font); }
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(129, 140, 248, 0.12) 0%, transparent 40%),
+                url('bg.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            opacity: 0.5;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--surface-border);
+            margin-bottom: 24px;
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1.5px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.25), inset 0 0 10px rgba(0, 0, 0, 0.4);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            flex-shrink: 0;
+        }
+        .header-avatar:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.55);
+        }
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--success);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+        .subtitle { font-size: 13px; color: var(--text-muted); }
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: rgba(255, 255, 255, 0.1); }
+        
+        /* Summary Banner */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--surface-border);
+            padding: 16px 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .summary-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-value { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .summary-sub { font-size: 12px; color: var(--text-muted); }
+
+        /* Report Fleet Section */
+        .report-fleet-card {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .fleet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--surface-border);
+            padding-bottom: 12px;
+        }
+        .fleet-title {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+        }
+        .fleet-tip {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        .fleet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 14px;
+        }
+        .probe-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--surface-border);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .probe-box:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .probe-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .probe-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .probe-status-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        .status-healthy {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .status-down {
+            background: rgba(244, 63, 94, 0.2);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.5);
+            animation: pulse-danger 1.5s infinite;
+        }
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(244, 63, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+        }
+        .probe-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+        .probe-reply {
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 6px 10px;
+            border-radius: 6px;
+            color: #38bdf8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .probe-restart {
+            font-size: 11px;
+            font-family: monospace;
+            background: rgba(244, 63, 94, 0.08);
+            border: 1px dashed rgba(244, 63, 94, 0.3);
+            color: #fda4af;
+            padding: 6px 8px;
+            border-radius: 6px;
+            word-break: break-all;
+            user-select: all;
+            cursor: pointer;
+        }
+
+        /* Infra Bar */
+        .infra-bar {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--surface-border);
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .infra-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .dot-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .dot-up { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .dot-down { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+        /* Node Cards */
+        .nodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .node-card {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .node-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .node-title { font-size: 16px; font-weight: 700; }
+        .node-ip { font-size: 12px; color: var(--primary); font-family: monospace; }
+        .node-role {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+        }
+
+        /* Meters */
+        .meter-group { display: flex; flex-direction: column; gap: 12px; }
+        .meter-item { display: flex; flex-direction: column; gap: 4px; }
+        .meter-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        .meter-name { color: var(--text-muted); }
+        .meter-val { font-weight: 600; font-family: monospace; }
+        .progress-track {
+            height: 7px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s ease-in-out;
+        }
+        .bar-normal { background: linear-gradient(90deg, #38bdf8, #818cf8); }
+        .bar-warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .bar-danger { background: linear-gradient(90deg, #f43f5e, #fda4af); }
+
+        /* Services Pill List */
+        .services-box {
+            border-top: 1px solid var(--surface-border);
+            padding-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .services-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .service-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 140px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .service-tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .service-tag.tag-down {
+            background: rgba(244, 63, 94, 0.22);
+            color: #ff4d6d;
+            border-color: rgba(244, 63, 94, 0.65);
+            font-weight: 700;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.35);
+            animation: pulse-down 1.8s infinite;
+        }
+        @keyframes pulse-down {
+            0% { border-color: rgba(244, 63, 94, 0.4); box-shadow: 0 0 6px rgba(244, 63, 94, 0.2); }
+            50% { border-color: rgba(244, 63, 94, 1.0); box-shadow: 0 0 14px rgba(244, 63, 94, 0.6); }
+            100% { border-color: rgba(244, 63, 94, 0.4); box-shadow: 0 0 6px rgba(244, 63, 94, 0.2); }
+        }
+
+        /* Filter Box */
+        .filter-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--surface-border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+        }
+        .filter-input:focus { border-color: var(--primary); }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-title">
+            <img src="avatar.jpg" alt="Tiong Nam x cloud Cloud" class="header-avatar" title="Cloud Cluster — Tiong Nam x cloud Cloud">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h1>Cloud Cluster — Mission Control</h1>
+                    <div class="pulse-dot" title="Live Telemetry Active"></div>
+                </div>
+                <div class="subtitle">Live 4-Node Health, Resource Saturation & Microservices Fleet</div>
+            </div>
+        </div>
+        <div class="controls">
+            <input type="text" id="svcFilter" class="filter-input" placeholder="Search service (e.g. report)..." oninput="applyFilter()">
+            <div class="badge" id="refreshTimer">Auto-Refresh: 5s</div>
+            <button class="btn" onclick="fetchMetrics()">Refresh Now</button>
+        </div>
+    </div>
+
+    <!-- Cluster Overview Cards -->
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="summary-label">Cluster Nodes</span>
+            <span class="summary-value" id="statNodes">4 / 4</span>
+            <span class="summary-sub" style="color: #34d399;">100% Online</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Active Microservices</span>
+            <span class="summary-value" id="statServices">--</span>
+            <span class="summary-sub" id="statHealthyServices">Eureka Discovery Registry</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Total Cluster RAM</span>
+            <span class="summary-value" id="statRam">--</span>
+            <span class="summary-sub" id="statRamSub">Across 4 VMs</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">App Storage (/opt)</span>
+            <span class="summary-value" id="statOpt">--</span>
+            <span class="summary-sub" id="statOptSub">Total Pool Space</span>
+        </div>
+    </div>
+
+    <!-- REPORT SERVICE FLEET LIVE PROBE SECTION -->
+    <div class="report-fleet-card">
+        <div class="fleet-header">
+            <div class="fleet-title">
+                <span>📑</span>
+                <span>Reporting Engine Fleet — Live Actuator Verification (/actuator/info)</span>
+            </div>
+            <div class="badge" style="background: rgba(16,185,129,0.1); color: #34d399; border-color: rgba(16,185,129,0.3);" id="fleetStatusSummary">
+                All 7 Instances Healthy
+            </div>
+        </div>
+        
+        <div class="fleet-tip">
+            💡 <strong>Support Team Guide:</strong> The health of each report instance is actively verified via <code>/actuator/info</code>. If any instance fails to reply with <code>{}</code> or shows <strong style="color: #fb7185;">NEEDS RESTART</strong>, click the copyable command shown on the box to restart that specific instance.
+        </div>
+
+        <div class="fleet-grid" id="reportFleetContainer">
+            <!-- Populated via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Infrastructure Heartbeats -->
+    <div class="infra-bar" id="infraContainer">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Backing Infrastructure:</span>
+    </div>
+
+    <!-- 4 Nodes Grid -->
+    <div class="nodes-grid" id="nodesContainer">
+        <!-- Rendered via JavaScript -->
+    </div>
+
+    <script>
+        let currentFilter = "";
+        let cachedData = null;
+
+        function applyFilter() {
+            currentFilter = document.getElementById("svcFilter").value.toLowerCase();
+            if (cachedData) {
+                renderNodes(cachedData.nodes);
+                renderReportFleet(cachedData.report_engines || []);
+            }
+        }
+
+        function getBarClass(pct) {
+            if (pct >= 85) return 'bar-danger';
+            if (pct >= 70) return 'bar-warn';
+            return 'bar-normal';
+        }
+
+        function renderReportFleet(engines) {
+            const container = document.getElementById("reportFleetContainer");
+            container.innerHTML = "";
+
+            let allHealthy = true;
+
+            engines.forEach((eng, idx) => {
+                const isHealthy = eng.status === "HEALTHY";
+                if (!isHealthy) allHealthy = false;
+
+                const box = document.createElement("div");
+                box.className = "probe-box";
+                box.style.borderColor = isHealthy ? "rgba(16, 185, 129, 0.25)" : "rgba(244, 63, 94, 0.5)";
+
+                box.innerHTML = `
+                    <div class="probe-top">
+                        <div class="probe-name">${eng.name}</div>
+                        <span class="probe-status-badge ${isHealthy ? 'status-healthy' : 'status-down'}">
+                            ${isHealthy ? '● REPLIES {}' : '▲ NEEDS RESTART'}
+                        </span>
+                    </div>
+
+                    <div class="probe-meta">
+                        <span>${eng.node} (Port ${eng.port})</span>
+                        <span>${eng.latency_ms > 0 ? eng.latency_ms + ' ms' : 'Timeout'}</span>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.55); border: 1px solid rgba(56,189,248,0.25); border-radius: 8px; padding: 10px 12px; margin: 4px 0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; font-size: 11px;">
+                            <span style="color: var(--text-muted); font-weight: 600;">ACTUATOR /info REPLY:</span>
+                            <span style="color: ${isHealthy ? '#34d399' : '#fb7185'}; font-weight: 700;">${isHealthy ? 'HTTP 200 OK' : 'CONNECTION FAILED'}</span>
+                        </div>
+                        <pre style="color: #38bdf8; font-family: monospace; font-size: 14px; font-weight: 700; margin: 0; background: rgba(0,0,0,0.4); padding: 6px 10px; border-radius: 4px;">{
+
+}</pre>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
+                            <span style="font-size: 11px; color: var(--text-muted);">Port ${eng.port} &bull; ${eng.latency_ms > 0 ? eng.latency_ms + 'ms' : 'Timeout'}</span>
+                            <button class="btn" style="padding: 2px 8px; font-size: 11px; color: var(--primary);" onclick="openInspectModal(${idx})">Inspect Payload 🔍</button>
+                        </div>
+                    </div>
+
+                    ${!isHealthy ? `
+                        <div style="font-size: 11px; color: #fb7185; font-weight: 600;">Restart Command (Click to Copy):</div>
+                        <div class="probe-restart" onclick="navigator.clipboard.writeText('${eng.restart_cmd}'); alert('Copied: ' + '${eng.restart_cmd}');" title="Click to copy command">
+                            ${eng.restart_cmd}
+                        </div>
+                    ` : `
+                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">
+                            Restart: <code>${eng.restart_cmd}</code>
+                        </div>
+                    `}
+                `;
+                container.appendChild(box);
+            });
+
+            const summaryEl = document.getElementById("fleetStatusSummary");
+            if (allHealthy) {
+                summaryEl.innerText = `All ${engines.length} Instances Healthy (Replied {})`;
+                summaryEl.style.color = "#34d399";
+                summaryEl.style.borderColor = "rgba(16,185,129,0.3)";
+            } else {
+                summaryEl.innerText = `⚠️ Issues Detected — Restart Required`;
+                summaryEl.style.color = "#fb7185";
+                summaryEl.style.borderColor = "rgba(244,63,94,0.5)";
+            }
+        }
+
+        function renderNodes(nodes) {
+            const container = document.getElementById("nodesContainer");
+            container.innerHTML = "";
+
+            const nodeOrder = ["10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24"];
+            const nodeMeta = {
+                "10.0.0.21": { title: "App01 — Gateway & Portals", role: "Primary API / Web" },
+                "10.0.0.22": { title: "App02 — Secondary Core", role: "WMS / Orders Secondary" },
+                "10.0.0.23": { title: "App03 — Compute Worker", role: "Reports / Labels / Users" },
+                "10.0.0.24": { title: "App04 — Compute Worker", role: "Reports / Labels / Users" }
+            };
+
+            nodeOrder.forEach(ip => {
+                const node = nodes[ip] || { status: 'OFFLINE', ip: ip };
+                const meta = nodeMeta[ip] || { title: ip, role: "Cluster Node" };
+
+                const ram = node.ram || { percent: 0, used_gb: 0, total_gb: 0 };
+                const cpu = node.cpu_percent || 0;
+                const opt = node.disk_opt || { percent: 0, used_gb: 0, total_gb: 0, free_gb: 0 };
+                const root = node.disk_root || { percent: 0, used_gb: 0, total_gb: 0 };
+                const load = (node.load || ["0", "0", "0"]).join(", ");
+
+                const services = node.services || [];
+                const totalSvc = node.services_total !== undefined ? node.services_total : services.length;
+                const healthySvc = node.services_healthy !== undefined ? node.services_healthy : services.filter(s => s.status === 'UP').length;
+                const downCount = Math.max(0, totalSvc - healthySvc);
+                const allHealthy = downCount === 0;
+
+                const filteredServices = services.filter(s => s.name.includes(currentFilter));
+                filteredServices.sort((a, b) => (a.status !== 'UP' ? -1 : 1) - (b.status !== 'UP' ? -1 : 1));
+
+                const headerCountText = currentFilter ? 
+                    `Filtered: ${filteredServices.length} / ${totalSvc} (${healthySvc} UP)` : 
+                    `${healthySvc} / ${totalSvc} UP`;
+
+                const statusBadge = allHealthy ? 
+                    `<span style="color:#34d399; font-weight:600;">● ${healthySvc}/${totalSvc} Eureka UP</span>` : 
+                    `<span style="color:#ff4d6d; font-weight:700; background:rgba(244,63,94,0.18); border:1px solid rgba(244,63,94,0.4); padding:2px 8px; border-radius:6px; animation: pulse 1.5s infinite;">⚠️ ${downCount} DOWN</span>`;
+
+                const card = document.createElement("div");
+                card.className = "node-card";
+                card.innerHTML = `
+                    <div class="node-header">
+                        <div>
+                            <div class="node-title">${meta.title}</div>
+                            <div class="node-ip">${ip} <span style="color:var(--text-muted); font-size:11px;">(${node.hostname || ''})</span></div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                            <div class="node-role">${meta.role}</div>
+                            <div style="font-size:10px; color:#94a3b8; font-family:monospace;">⏱️ Up: ${node.uptime || 'Unknown'}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; font-size:11px; margin-top: -6px;">
+                        <span style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:600;">
+                            🐧 ${node.os || 'Linux'}
+                        </span>
+                        <span style="background:rgba(129,140,248,0.12); border:1px solid rgba(129,140,248,0.3); color:#a5b4fc; padding:3px 8px; border-radius:6px; font-weight:600;">
+                            ⚡ ${node.cores || 8} vCPUs &bull; ${node.cpu_model ? node.cpu_model.split('@')[0].replace('Intel(R) Xeon(R) ', '').replace('CPU', '').trim() : 'x86_64'}
+                        </span>
+                    </div>
+
+                    <div class="meter-group">
+                        <div class="meter-item">
+                            <div class="meter-label-row">
+                                <span class="meter-name">CPU: ${node.cpu_model ? node.cpu_model.replace('Intel(R) Xeon(R) ', '') : 'Processor'}</span>
+                                <span class="meter-val">${cpu}% (Load: ${load})</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-bar ${getBarClass(cpu)}" style="width: ${cpu}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="meter-item">
+                            <div class="meter-label-row">
+                                <span class="meter-name">Memory (RAM)</span>
+                                <span class="meter-val">${ram.used_gb}G / ${ram.total_gb}G (${ram.percent}%)</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-bar ${getBarClass(ram.percent)}" style="width: ${ram.percent}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="meter-item">
+                            <div class="meter-label-row">
+                                <span class="meter-name">Storage /opt Partition</span>
+                                <span class="meter-val" style="${opt.percent >= 70 ? 'color:#f59e0b;font-weight:700;' : ''}">${opt.used_gb}G / ${opt.total_gb}G (${opt.percent}%)</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-bar ${getBarClass(opt.percent)}" style="width: ${opt.percent}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="meter-item">
+                            <div class="meter-label-row">
+                                <span class="meter-name">Storage Root (/)</span>
+                                <span class="meter-val">${root.used_gb}G / ${root.total_gb}G (${root.percent}%)</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-bar ${getBarClass(root.percent)}" style="width: ${root.percent}%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="services-box">
+                        <div class="services-header">
+                            <span style="font-weight: 600;">Services Registered (${headerCountText})</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="service-tags">
+                            ${filteredServices.length > 0 ? filteredServices.map(s => `
+                                <div class="service-tag ${s.status === 'UP' ? '' : 'tag-down'}" title="${s.status === 'UP' ? 'Service is UP in Eureka' : 'Service is DOWN / Deregistered from Eureka!'}">
+                                    <span>${s.status === 'UP' ? '●' : '⚠️'}</span>
+                                    <span>${s.name}${s.port ? ':' + s.port : ''}</span>
+                                    ${s.status !== 'UP' ? '<span style="font-size:9px; font-weight:800; margin-left:3px; background:#ff4d6d; color:#070a13; padding:1px 4px; border-radius:3px;">DOWN</span>' : ''}
+                                </div>
+                            `).join('') : '<span style="font-size:11px;color:var(--text-muted);">No services matching filter</span>'}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderInfra(infra) {
+            const container = document.getElementById("infraContainer");
+            container.innerHTML = `<span style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Backing Infrastructure:</span>`;
+            
+            Object.values(infra).forEach(item => {
+                const el = document.createElement("div");
+                el.className = "infra-item";
+                el.innerHTML = `
+                    <div class="dot-status ${item.up ? 'dot-up' : 'dot-down'}"></div>
+                    <span>${item.name}</span>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        async function fetchMetrics() {
+            try {
+                const res = await fetch('metrics.json?t=' + new Date().getTime());
+                const data = await res.json();
+                cachedData = data;
+
+                document.getElementById("statNodes").innerText = `${data.cluster.online_nodes} / ${data.cluster.total_nodes}`;
+                document.getElementById("statServices").innerText = `${data.cluster.healthy_services} / ${data.cluster.total_services} UP`;
+                const downTotal = (data.cluster.total_services || 0) - (data.cluster.healthy_services || 0);
+                const statHealthyEl = document.getElementById("statHealthyServices");
+                if (statHealthyEl) {
+                    if (downTotal > 0) {
+                        statHealthyEl.innerHTML = `<span style="color:#ff4d6d; font-weight:700;">⚠️ ${downTotal} Service${downTotal > 1 ? 's' : ''} DOWN</span>`;
+                    } else {
+                        statHealthyEl.innerHTML = `<span style="color:#34d399;">100% Healthy (All Registered)</span>`;
+                    }
+                }
+                document.getElementById("statRam").innerText = `${data.cluster.used_ram_gb} GB / ${data.cluster.total_ram_gb} GB`;
+                document.getElementById("statRamSub").innerText = `${Math.round(data.cluster.used_ram_gb / data.cluster.total_ram_gb * 100)}% Memory Allocation`;
+                document.getElementById("statOpt").innerText = `${data.cluster.used_opt_gb} GB / ${data.cluster.total_opt_gb} GB`;
+                document.getElementById("statOptSub").innerText = `${Math.round(data.cluster.used_opt_gb / data.cluster.total_opt_gb * 100)}% Total Disk Saturation`;
+
+                renderInfra(data.infra);
+                renderReportFleet(data.report_engines || []);
+                renderNodes(data.nodes);
+            } catch (e) {
+                console.error("Poll error:", e);
+            }
+        }
+
+        fetchMetrics();
+        setInterval(fetchMetrics, 4500);
+    </script>
+
+    <!-- Live Probe Inspection Modal -->
+    <div id="inspectModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#0f172a; border:1px solid #38bdf8; border-radius:16px; padding:24px; max-width:550px; width:90%; box-shadow:0 20px 50px rgba(0,0,0,0.8); display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:700; font-size:16px; color:#38bdf8;" id="modalTitle">Live Actuator Info Response</div>
+                <button class="btn" onclick="closeInspectModal()" style="padding:4px 10px; font-weight:bold;">✕</button>
+            </div>
+            <div style="font-size:13px; color:#94a3b8; display:flex; flex-direction:column; gap:4px;" id="modalMeta"></div>
+            <div style="font-size:12px; font-weight:600; color:#38bdf8;">Pretty-Printed Response Body:</div>
+            <pre id="modalJson" style="background:#070a13; border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:16px; font-family:monospace; font-size:16px; color:#38bdf8; font-weight:700;"></pre>
+            <div id="modalRestart" style="display:none;"></div>
+            <div style="display:flex; justify-content:flex-end;">
+                <button class="btn" onclick="closeInspectModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openInspectModal(idx) {
+        if (!cachedData || !cachedData.report_engines) return;
+        const eng = cachedData.report_engines[idx];
+        if (!eng) return;
+        document.getElementById("modalTitle").innerText = "Live Probe: " + eng.name + " (" + eng.node + ")";
+        document.getElementById("modalMeta").innerHTML = 
+            "<div><strong>Target URL:</strong> <code>" + eng.url + "</code></div>" +
+            "<div><strong>HTTP Status:</strong> <span style='color:" + (eng.status === 'HEALTHY' ? '#34d399' : '#fb7185') + "; font-weight:700;'>" + (eng.status === 'HEALTHY' ? 'HTTP 200 OK' : 'FAILED') + "</span> | <strong>Latency:</strong> " + eng.latency_ms + " ms</div>" +
+            "<div><strong>Last Probed:</strong> " + new Date((cachedData.timestamp || Date.now()/1000) * 1000).toLocaleTimeString() + "</div>";
+        document.getElementById("modalJson").innerText = eng.status === 'HEALTHY' ? "{\n\n}" : "Error: Target unreachable or connection timed out.";
+        const restartDiv = document.getElementById("modalRestart");
+        if (eng.status !== 'HEALTHY') {
+            restartDiv.style.display = "block";
+            restartDiv.innerHTML = "<div style='font-size:12px; color:#fb7185; font-weight:bold; margin-bottom:4px;'>Restart Command:</div><div class='probe-restart' onclick='navigator.clipboard.writeText(\"" + eng.restart_cmd + "\"); alert(\"Copied: " + eng.restart_cmd + "\");'>" + eng.restart_cmd + "</div>";
+        } else {
+            restartDiv.style.display = "none";
+        }
+        document.getElementById("inspectModal").style.display = "flex";
+    }
+    function closeInspectModal() {
+        document.getElementById("inspectModal").style.display = "none";
+    }
+    </script>
+
+</body>
+</html>
